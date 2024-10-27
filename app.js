@@ -58,26 +58,21 @@ function saveUserDataToFile(user) {
     link.click();
 }
 
-// Отправка попытки угадать число
 function submitGuess() {
     const guess = document.getElementById('guessNumber').value;
     socket.emit('submitGuess', { guess, telegramUserId });
 }
 
-// Получение результатов попытки
 socket.on('result', (data) => {
     document.getElementById('result').textContent = data.message;
-    // Запрашиваем текущее состояние после каждой попытки
     socket.emit('requestGameState', { telegramUserId });
 });
 
-// Обработка завершения игры
 socket.on('gameEnded', (data) => {
     document.getElementById('result').textContent = data.message;
     window.location.href = `winner.html?winnermessage=${encodeURIComponent(data.message)}`;
 });
 
-// Получение состояния игры
 socket.on('gameState', (data) => {
     document.getElementById('stars').textContent = data.stars;
     document.getElementById('bank').textContent = data.bank;
