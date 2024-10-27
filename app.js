@@ -11,25 +11,29 @@ document.addEventListener('DOMContentLoaded', function() {
         let user;
         if (window.Telegram && window.Telegram.WebApp) {
             const telegram = window.Telegram.WebApp;
+            console.log("Telegram WebApp найден");
             if (telegram.initDataUnsafe && telegram.initDataUnsafe.user) {
                 user = telegram.initDataUnsafe.user;
+                console.log("Данные пользователя получены от Telegram:", user);
+            } else {
+                console.log("Пользовательские данные не найдены в Telegram.initDataUnsafe");
             }
+        } else {
+            console.log("Telegram WebApp не найден");
         }
 
         if (user) {
             telegramUserId = user.id;
             userName = user.first_name;
             saveUserDataToFile(user);
-            console.log("Имя пользователя:", userName);
+            console.log("Имя пользователя установлено:", userName);
         } else {
             console.log("Telegram не доступен, используем имя по умолчанию.");
         }
 
-        // Устанавливаем количество звезд по умолчанию
-        const stars = user ? 10 : 100;
-
         // Отправляем данные о пользователе на сервер
         socket.emit('setTelegramUser', { telegramUserId, userName });
+        console.log("Отправлены данные на сервер: ", { telegramUserId, userName });
 
         // Обновляем элемент userInfo
         const userInfoElement = document.getElementById('userInfo');
