@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let user;
         if (window.Telegram && window.Telegram.WebApp) {
             const telegram = window.Telegram.WebApp;
-            user = telegram.initDataUnsafe?.user;
+            user = telegram.initDataUnsafe.user;
         }
 
         // Устанавливаем значения по умолчанию, если Telegram не доступен
