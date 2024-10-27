@@ -1,41 +1,27 @@
-console.log("Начало выполнения скрипта app.js");  // Отладочное сообщение
+console.log("Начало выполнения скрипта app.js");
 
 const socket = io();
 let telegramUserId = null;
-let userName = "Неизвестный игрок";  // По умолчанию будет "Неизвестный игрок"
+let userName = "Неизвестный игрок"; 
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Событие DOMContentLoaded произошло");
 
     try {
-        let user;
-        if (window.Telegram && window.Telegram.WebApp) {
-            const telegram = window.Telegram.WebApp;
-            console.log("Telegram WebApp найден");
-            if (telegram.initDataUnsafe && telegram.initDataUnsafe.user) {
-                user = telegram.initDataUnsafe.user;
-                console.log("Данные пользователя получены от Telegram:", user);
-            } else {
-                console.log("Пользовательские данные не найдены в Telegram.initDataUnsafe");
-            }
-        } else {
-            console.log("Telegram WebApp не найден");
-        }
+        const telegram = window.Telegram.WebApp;
+        const user = telegram.initDataUnsafe ? telegram.initDataUnsafe.user : null;
 
         if (user) {
             telegramUserId = user.id;
             userName = user.first_name;
             saveUserDataToFile(user);
-            console.log("Имя пользователя установлено:", userName);
+            console.log("Имя пользователя:", userName);
         } else {
-            console.log("Telegram не доступен, используем имя по умолчанию.");
+            console.log("Telegram WebApp не доступен, используем имя по умолчанию.");
         }
 
-        // Отправляем данные о пользователе на сервер
         socket.emit('setTelegramUser', { telegramUserId, userName });
-        console.log("Отправлены данные на сервер: ", { telegramUserId, userName });
 
-        // Обновляем элемент userInfo
         const userInfoElement = document.getElementById('userInfo');
         if (userInfoElement) {
             userInfoElement.textContent = `Добро пожаловать, ${userName}!`;
@@ -62,26 +48,21 @@ function saveUserDataToFile(user) {
     link.click();
 }
 
-// Отправка попытки угадать число
 function submitGuess() {
     const guess = document.getElementById('guessNumber').value;
     socket.emit('submitGuess', { guess, telegramUserId });
 }
 
-// Получение результатов попытки
 socket.on('result', (data) => {
     document.getElementById('result').textContent = data.message;
-    // Запрашиваем текущее состояние после каждой попытки
     socket.emit('requestGameState', { telegramUserId });
 });
 
-// Обработка завершения игры
 socket.on('gameEnded', (data) => {
     document.getElementById('result').textContent = data.message;
     window.location.href = `winner.html?winnermessage=${encodeURIComponent(data.message)}`;
 });
 
-// Получение состояния игры
 socket.on('gameState', (data) => {
     document.getElementById('stars').textContent = data.stars;
     document.getElementById('bank').textContent = data.bank;
@@ -90,4 +71,4 @@ socket.on('gameState', (data) => {
     }
 });
 
-console.log("Завершение выполнения скрипта app.js");  // Отладочное сообщение
+console.log("Завершение выполнения скрипта app.js");
