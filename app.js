@@ -1,44 +1,61 @@
-console.log("Начало выполнения скрипта app.js");
+console.log("Начало выполнения скрипта app.js");  // Отладочное сообщение
 
 const socket = io();
 let telegramUserId = null;
-let userName = "Неизвестный игрок"; 
+let userName = "Неизвестный игрок";  // По умолчанию будет "Неизвестный игрок"
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Событие DOMContentLoaded произошло");
+
     try {
+        let user;
         if (window.Telegram && window.Telegram.WebApp) {
             const telegram = window.Telegram.WebApp;
-            console.log("WebApp доступен:", telegram);
             if (telegram.initDataUnsafe && telegram.initDataUnsafe.user) {
-                const user = telegram.initDataUnsafe.user;
-                telegramUserId = user.id;
-                userName = user.first_name;
-                console.log("Имя пользователя:", userName);
-            } else {
-                console.warn("Пользовательские данные не найдены в initDataUnsafe");
-                alert("Пользовательские данные не найдены.");
+                user = telegram.initDataUnsafe.user;
             }
-        } else {
-            console.warn("WebApp не доступен");
-            alert("WebApp не доступен.");
         }
+
+        if (user) {
+            telegramUserId = user.id;
+            userName = user.first_name;
+            saveUserDataToFile(user);
+            console.log("Имя пользователя:", userName);
+        } else {
+            console.log("Telegram не доступен, используем имя по умолчанию.");
+        }
+
+        // Устанавливаем количество звезд по умолчанию
+        const stars = user ? 10 : 100;
+
+        // Отправляем данные о пользователе на сервер
         socket.emit('setTelegramUser', { telegramUserId, userName });
-        updateUserInfo(userName);
+
+        // Обновляем элемент userInfo
+        const userInfoElement = document.getElementById('userInfo');
+        if (userInfoElement) {
+            userInfoElement.textContent = `Добро пожаловать, ${userName}!`;
+            console.log("Элемент userInfo обновлен.");
+        } else {
+            console.error("Элемент с id 'userInfo' не найден.");
+        }
     } catch (error) {
         console.error("Ошибка при инициализации:", error.message);
-        alert(`Ошибка при инициализации: ${error.message}`);
+        const userInfoElement = document.getElementById('userInfo');
+        if (userInfoElement) {
+            userInfoElement.textContent = `Добро пожаловать, ${userName}!`;
+        }
     }
 });
 
-function updateUserInfo(name) {
-    const userInfoElement = document.getElementById('userInfo');
-    if (userInfoElement) {
-        userInfoElement.textContent = `Добро пожаловать, ${name}!`;
-    } else {
-        console.error("Элемент userInfo не найден");
-        alert("Элемент userInfo не найден");
-    }
+function saveUserDataToFile(user) {
+    const userNameForFile = user ? user.first_name : "Неизвестный игрок";
+    const userData = `User Info: ${JSON.stringify(user)}\nTarget Number: ${targetNumber}`;
+    const blob = new Blob([userData], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${userNameForFile}_info.txt`;
+    link.click();
 }
 
 // Отправка попытки угадать число
@@ -50,6 +67,7 @@ function submitGuess() {
 // Получение результатов попытки
 socket.on('result', (data) => {
     document.getElementById('result').textContent = data.message;
+    // Запрашиваем текущее состояние после каждой попытки
     socket.emit('requestGameState', { telegramUserId });
 });
 
@@ -68,4 +86,4 @@ socket.on('gameState', (data) => {
     }
 });
 
-console.log("Завершение выполнения скрипта app.js");
+console.log("Завершение выполнения скрипта app.js");  // Отладочное сообщение
