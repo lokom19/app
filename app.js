@@ -11,20 +11,22 @@ document.addEventListener('DOMContentLoaded', function() {
         let user;
         if (window.Telegram && window.Telegram.WebApp) {
             const telegram = window.Telegram.WebApp;
-            user = telegram.initDataUnsafe.user;
+            if (telegram.initDataUnsafe && telegram.initDataUnsafe.user) {
+                user = telegram.initDataUnsafe.user;
+            }
         }
 
-        // Устанавливаем значения по умолчанию, если Telegram не доступен
-        telegramUserId = user?.id || "unknown_user";
-        userName = user?.first_name || "Неизвестный игрок";
-
-        // Сохраняем данные, если пользователь найден
         if (user) {
+            telegramUserId = user.id;
+            userName = user.first_name;
             saveUserDataToFile(user);
             console.log("Имя пользователя:", userName);
         } else {
             console.log("Telegram не доступен, используем имя по умолчанию.");
         }
+
+        // Устанавливаем количество звезд по умолчанию
+        stars = user ? stars : 100; 
 
         // Отправляем данные о пользователе на сервер
         socket.emit('setTelegramUser', { telegramUserId, userName });
@@ -39,7 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } catch (error) {
         console.error("Ошибка при инициализации:", error.message);
-        // Если возникла ошибка, покажем имя по умолчанию
         const userInfoElement = document.getElementById('userInfo');
         if (userInfoElement) {
             userInfoElement.textContent = `Добро пожаловать, ${userName}!`;
