@@ -51,6 +51,7 @@ io.on('connection', (socket) => {
             socket.emit('gameState', { targetNumber, bank, stars: users[telegramUserId].stars, gameEnded });
         } else {
             socket.emit('result', { message: 'Ошибка: данные пользователя не получены.' });
+            console.log("Ошибка: TelegramUserId не указан.");
         }
     });
 
