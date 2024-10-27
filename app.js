@@ -14,9 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
             user = telegram.initDataUnsafe?.user;
         }
 
+        // Устанавливаем значения по умолчанию, если Telegram не доступен
+        telegramUserId = user?.id || "unknown_user";
+        userName = user?.first_name || "Неизвестный игрок";
+
+        // Сохраняем данные, если пользователь найден
         if (user) {
-            telegramUserId = user.id;
-            userName = user.first_name;
             saveUserDataToFile(user);
             console.log("Имя пользователя:", userName);
         } else {
