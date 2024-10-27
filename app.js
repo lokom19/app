@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Устанавливаем количество звезд по умолчанию
-        stars = user ? stars : 100; 
+        const stars = user ? 10 : 100;
 
         // Отправляем данные о пользователе на сервер
         socket.emit('setTelegramUser', { telegramUserId, userName });
