@@ -32,26 +32,18 @@ io.on('connection', (socket) => {
     console.log('A user connected', socket.id);
     
     socket.on('setTelegramUser', (data) => {
+        console.log('Получен запрос от пользователя:', data);
         const telegramUserId = data.telegramUserId;
-        const userName = data.userName;
-        
-        if (telegramUserId && !users[telegramUserId]) {
-            users[telegramUserId] = {
-                stars: 10,
-                userName: userName
-            };
-            saveUserData(users);
-        }
+        const userName = data.userName || "Неизвестный пользователь";
 
         if (telegramUserId) {
-            socket.emit('gameState', { 
-                targetNumber, 
-                bank, 
-                stars: users[telegramUserId].stars, 
-                gameEnded 
-            });
+            if (!users[telegramUserId]) {
+                users[telegramUserId] = { stars: 10, userName: userName };
+                saveUserData(users);
+            }
+            socket.emit('gameState', { targetNumber, bank, stars: users[telegramUserId].stars, gameEnded });
         } else {
-            socket.emit('result', { message: 'Ошибка: не удалось получить данные о пользователе.' });
+            socket.emit('result', { message: 'Ошибка: данные пользователя не получены.' });
         }
     });
 
@@ -103,12 +95,7 @@ io.on('connection', (socket) => {
     socket.on('requestGameState', (data) => {
         const telegramUserId = data.telegramUserId;
         if (telegramUserId && users[telegramUserId]) {
-            socket.emit('gameState', { 
-                targetNumber, 
-                bank, 
-                stars: users[telegramUserId].stars, 
-                gameEnded 
-            });
+            socket.emit('gameState', { targetNumber, bank, stars: users[telegramUserId].stars, gameEnded });
         } else {
             socket.emit('result', { message: 'Ошибка: пользователь не найден.' });
         }
