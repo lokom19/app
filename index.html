@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess the Number Game</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            background-color: black;
+            color: #00FF00;
+        }
+        input, button {
+            margin: 10px;
+            background-color: #00FF00;
+            color: black;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+        }
+        #matrix {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+
+    <p id="userInfo"></p>
+
+    <h1>Угадай число</h1>
+    <p>Введите число от 1 до 1,000,000:</p>
+    <input type="number" id="guessNumber" min="1" max="1000000">
+    <button onclick="submitGuess()">Отправить попытку</button>
+    <p id="result"></p>
+    <p>Осталось звёзд: <span id="stars"></span></p>
+    <p>Банк: <span id="bank"></span></p>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const matrix = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%";
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function draw() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#00FF00";
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrix[Math.floor(Math.random() * matrix.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                drops[i]++;
+            }
+        }
+
+        setInterval(draw, 50);
+    </script>
+</body>
+</html>
