@@ -32,19 +32,25 @@ class TelegramGameApp {
                     this.userName = user.first_name;
                     console.log(`Имя пользователя: ${this.userName}`);
                     this.saveUserDataToFile(user);
-                    this.updateUI(); // Обновляем UI после получения данных о пользователе
                 } else {
                     console.log("Пользовательские данные не найдены в Telegram.initDataUnsafe");
-                    this.updateUI(); // Обновляем UI с именем по умолчанию
+                    this.userName = "Не удалось определить пользователя";
+                    this.stars = null; // Очищаем звезды
+                    this.bank = null; // Очищаем банк
                 }
             } else {
                 console.log("Telegram WebApp не найден. Пожалуйста, откройте приложение через Telegram.");
-                this.updateUI(); // Обновляем UI с именем по умолчанию
+                this.userName = "Не удалось определить пользователя";
+                this.stars = null;
+                this.bank = null;
             }
 
             // Отправляем данные на сервер
             this.socket.emit('setTelegramUser', { telegramUserId: this.telegramUserId, userName: this.userName });
             console.log("Отправлены данные на сервер:", { telegramUserId: this.telegramUserId, userName: this.userName });
+
+            // Обновляем интерфейс
+            this.updateUI();
         }, 1000); // Задержка 1 секунда
     }
 
@@ -57,8 +63,14 @@ class TelegramGameApp {
             console.log("Элемент с id 'userInfo' не найден.");
         }
 
-        document.getElementById('stars').textContent = this.stars;
-        document.getElementById('bank').textContent = this.bank;
+        // Если данные пользователя не получены, выводим сообщение
+        if (this.stars === null || this.bank === null) {
+            document.getElementById('stars').textContent = "Не удалось определить пользователя";
+            document.getElementById('bank').textContent = "";
+        } else {
+            document.getElementById('stars').textContent = this.stars;
+            document.getElementById('bank').textContent = this.bank;
+        }
     }
 
     saveUserDataToFile(user) {
