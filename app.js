@@ -14,15 +14,17 @@ class TelegramGameApp {
         document.addEventListener('DOMContentLoaded', this.init.bind(this));
     }
 
-    init() {
-        this.checkTelegramWebApp();
+    async init() {
+        await this.checkTelegramWebApp();  // Асинхронная проверка Telegram WebApp
         this.initializeUI();
         this.registerSocketEvents();
     }
 
-    checkTelegramWebApp() {
-        // Задержка для инициализации Telegram WebApp
-        setTimeout(() => {
+    async checkTelegramWebApp() {
+        try {
+            // Ждем, пока window.Telegram не станет доступен
+            await this.waitForTelegram();
+            
             if (window.Telegram && window.Telegram.WebApp) {
                 console.log("Telegram WebApp найден");
                 this.telegram = window.Telegram.WebApp;
@@ -43,7 +45,24 @@ class TelegramGameApp {
             // Отправляем данные на сервер
             this.socket.emit('setTelegramUser', { telegramUserId: this.telegramUserId, userName: this.userName });
             console.log("Отправлены данные на сервер:", { telegramUserId: this.telegramUserId, userName: this.userName });
-        }, 1000); // Задержка 1 секунда
+        } catch (error) {
+            console.error("Ошибка при проверке Telegram WebApp:", error);
+        }
+    }
+
+    async waitForTelegram() {
+        // Ждем до 5 секунд, пока window.Telegram не станет доступен
+        const maxAttempts = 10;
+        let attempts = 0;
+
+        while (!window.Telegram && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
+        }
+
+        if (!window.Telegram) {
+            throw new Error("Telegram WebApp не инициализировался.");
+        }
     }
 
     initializeUI() {
