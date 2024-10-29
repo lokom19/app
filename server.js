@@ -1,120 +1,113 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const fs = require('fs');
+console.log("Начало выполнения скрипта app.js");
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+class TelegramGameApp {
+    constructor() {
+        this.telegram = window.Telegram ? window.Telegram.WebApp : null;
+        this.socket = io();
+        this.userName = "Неизвестный игрок";
+        this.telegramUserId = null;
+        this.targetNumber = Math.floor(Math.random() * 1000000) + 1;
+        this.stars = 5;
+        this.bank = 0;
+        this.gameEnded = false;
 
-let targetNumber = Math.floor(Math.random() * 1000000) + 1;
-let bank = 0;
-let gameEnded = false;
-
-function loadUserData() {
-    if (fs.existsSync('users.json')) {
-        const data = fs.readFileSync('users.json');
-        return JSON.parse(data);
-    } else {
-        return {};
+        document.addEventListener('DOMContentLoaded', this.init.bind(this));
     }
-}
 
-function saveUserData(users) {
-    fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
-}
+    init() {
+        this.setUpTelegramUser();
+        this.initializeUI();
+        this.registerSocketEvents();
+    }
 
-let users = loadUserData();
-
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    next();
-});
-
-app.use(express.static('.'));
-
-io.on('connection', (socket) => {
-    console.log('A user connected', socket.id);
-    
-    socket.on('setTelegramUser', (data) => {
-        console.log('Получен запрос от пользователя:', data);
-        const telegramUserId = data.telegramUserId;
-        const userName = data.userName || "Неизвестный пользователь";
-
-        if (telegramUserId) {
-            if (!users[telegramUserId]) {
-                users[telegramUserId] = { stars: 10, userName: userName };
-                saveUserData(users);
+    setUpTelegramUser() {
+        if (this.telegram) {
+            alert("Telegram WebApp найден");
+            const user = this.telegram.initDataUnsafe?.user;
+            if (user) {
+                this.telegramUserId = user.id;
+                this.userName = user.first_name;
+                alert("Имя пользователя установлено: " + this.userName);
+                this.saveUserDataToFile(user);
+            } else {
+                alert("Пользовательские данные не найдены в Telegram.initDataUnsafe");
             }
-            socket.emit('gameState', { targetNumber, bank, stars: users[telegramUserId].stars, gameEnded });
         } else {
-            socket.emit('result', { message: 'Ошибка: данные пользователя не получены.' });
-            console.log("Ошибка: TelegramUserId не указан.");
-        }
-    });
-
-    socket.on('submitGuess', (data) => {
-        const telegramUserId = data.telegramUserId;
-
-        if (!telegramUserId || !users[telegramUserId]) {
-            socket.emit('result', { message: 'Ошибка: пользователь не найден. Попробуйте заново.' });
-            return;
+            alert("Telegram WebApp не найден");
         }
 
-        let guess = parseInt(data.guess);
-        let user = users[telegramUserId];
+        this.socket.emit('setTelegramUser', { telegramUserId: this.telegramUserId, userName: this.userName });
+        alert("Отправлены данные на сервер: " + JSON.stringify({ telegramUserId: this.telegramUserId, userName: this.userName }));
+    }
 
-        if (gameEnded) {
-            socket.emit('result', { message: 'Игра окончена. Число уже угадано!' });
+    initializeUI() {
+        const userInfoElement = document.getElementById('userInfo');
+        if (userInfoElement) {
+            userInfoElement.textContent = `Добро пожаловать, ${this.userName}!`;
+            alert("Элемент userInfo обновлен.");
+        } else {
+            alert("Элемент с id 'userInfo' не найден.");
+        }
+
+        document.getElementById('stars').textContent = this.stars;
+        document.getElementById('bank').textContent = this.bank;
+    }
+
+    saveUserDataToFile(user) {
+        const userNameForFile = user ? user.first_name : "Неизвестный игрок";
+        const userData = `User Info: ${JSON.stringify(user)}\nTarget Number: ${this.targetNumber}`;
+        const blob = new Blob([userData], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${userNameForFile}_info.txt`;
+        link.click();
+    }
+
+    submitGuess() {
+        const guess = parseInt(document.getElementById('guessNumber').value);
+        if (this.gameEnded) {
+            document.getElementById('result').textContent = 'Игра окончена. Число уже угадано!';
             return;
         }
 
         if (isNaN(guess) || guess < 1 || guess > 1000000) {
-            socket.emit('result', { message: 'Введите число от 1 до 1,000,000.' });
+            document.getElementById('result').textContent = 'Пожалуйста, введите корректное число от 1 до 1,000,000.';
             return;
         }
 
-        if (user.stars <= 0) {
-            socket.emit('result', { message: 'У вас недостаточно звёзд!' });
+        if (this.stars <= 0) {
+            document.getElementById('result').textContent = 'У вас недостаточно звёзд!';
             return;
         }
 
-        user.stars--;
-        bank++;
-        saveUserData(users);
+        this.stars--;
+        this.bank++;
 
-        if (guess === targetNumber) {
-            gameEnded = true;
-            io.emit('gameEnded', {
-                message: `Поздравляем, ${user.userName}! Вы угадали число ${targetNumber} и выиграли ${bank} звёзд!`,
-                winner: user.userName,
-                targetNumber,
-                bank
-            });
-        } else if (guess < targetNumber) {
-            socket.emit('result', { message: 'Ваше число меньше загаданного.' });
-        } else {
-            socket.emit('result', { message: 'Ваше число больше загаданного.' });
-        }
-    });
+        this.socket.emit('submitGuess', { guess, telegramUserId: this.telegramUserId });
+    }
 
-    socket.on('requestGameState', (data) => {
-        const telegramUserId = data.telegramUserId;
-        if (telegramUserId && users[telegramUserId]) {
-            socket.emit('gameState', { targetNumber, bank, stars: users[telegramUserId].stars, gameEnded });
-        } else {
-            socket.emit('result', { message: 'Ошибка: пользователь не найден.' });
-        }
-    });
+    registerSocketEvents() {
+        this.socket.on('result', (data) => {
+            document.getElementById('result').textContent = data.message;
+            this.socket.emit('requestGameState', { telegramUserId: this.telegramUserId });
+        });
 
-    socket.on('disconnect', () => {
-        console.log('User disconnected', socket.id);
-        saveUserData(users);
-    });
-});
+        this.socket.on('gameEnded', (data) => {
+            document.getElementById('result').textContent = data.message;
+            window.location.href = `winner.html?winnermessage=${encodeURIComponent(data.message)}`;
+        });
 
-server.listen(3000, () => {
-    console.log('Server running on port 3000');
-});
+        this.socket.on('gameState', (data) => {
+            document.getElementById('stars').textContent = data.stars;
+            document.getElementById('bank').textContent = data.bank;
+            if (data.gameEnded) {
+                document.getElementById('result').textContent = `Игра завершена, правильное число: ${data.targetNumber}`;
+                this.gameEnded = true;
+            }
+        });
+    }
+}
+
+const app = new TelegramGameApp();
+
+document.getElementById('submitButton').addEventListener('click', () => app.submitGuess());
