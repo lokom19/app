@@ -45,7 +45,7 @@ io.on('connection', (socket) => {
 
         if (telegramUserId) {
             if (!users[telegramUserId]) {
-                users[telegramUserId] = { stars: 10, userName: userName };
+                users[telegramUserId] = { stars: 5, userName: userName };
                 saveUserData(users);
             }
             socket.emit('gameState', { targetNumber, bank, stars: users[telegramUserId].stars, gameEnded });
