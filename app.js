@@ -16,7 +16,6 @@ class TelegramGameApp {
 
     init() {
         this.checkTelegramWebApp();
-        this.initializeUI();
         this.registerSocketEvents();
     }
 
@@ -33,11 +32,14 @@ class TelegramGameApp {
                     this.userName = user.first_name;
                     console.log(`Имя пользователя: ${this.userName}`);
                     this.saveUserDataToFile(user);
+                    this.updateUI(); // Обновляем UI после получения данных о пользователе
                 } else {
                     console.log("Пользовательские данные не найдены в Telegram.initDataUnsafe");
+                    this.updateUI(); // Обновляем UI с именем по умолчанию
                 }
             } else {
                 console.log("Telegram WebApp не найден. Пожалуйста, откройте приложение через Telegram.");
+                this.updateUI(); // Обновляем UI с именем по умолчанию
             }
 
             // Отправляем данные на сервер
@@ -46,7 +48,7 @@ class TelegramGameApp {
         }, 1000); // Задержка 1 секунда
     }
 
-    initializeUI() {
+    updateUI() {
         const userInfoElement = document.getElementById('userInfo');
         if (userInfoElement) {
             userInfoElement.textContent = `Добро пожаловать, ${this.userName}!`;
