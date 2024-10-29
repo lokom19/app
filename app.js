@@ -14,14 +14,17 @@ class TelegramGameApp {
         document.addEventListener('DOMContentLoaded', this.init.bind(this));
     }
 
-    init() {
-        this.checkTelegramWebApp();
+    async init() {
+        await this.checkTelegramWebApp();  // Асинхронная проверка Telegram WebApp
+        this.initializeUI();
         this.registerSocketEvents();
     }
 
-    checkTelegramWebApp() {
-        // Задержка для инициализации Telegram WebApp
-        setTimeout(() => {
+    async checkTelegramWebApp() {
+        try {
+            // Ждем, пока window.Telegram не станет доступен
+            await this.waitForTelegram();
+            
             if (window.Telegram && window.Telegram.WebApp) {
                 console.log("Telegram WebApp найден");
                 this.telegram = window.Telegram.WebApp;
@@ -34,27 +37,35 @@ class TelegramGameApp {
                     this.saveUserDataToFile(user);
                 } else {
                     console.log("Пользовательские данные не найдены в Telegram.initDataUnsafe");
-                    this.userName = "Не удалось определить пользователя";
-                    this.stars = null; // Очищаем звезды
-                    this.bank = null; // Очищаем банк
                 }
             } else {
                 console.log("Telegram WebApp не найден. Пожалуйста, откройте приложение через Telegram.");
-                this.userName = "Не удалось определить пользователя";
-                this.stars = null;
-                this.bank = null;
             }
 
             // Отправляем данные на сервер
             this.socket.emit('setTelegramUser', { telegramUserId: this.telegramUserId, userName: this.userName });
             console.log("Отправлены данные на сервер:", { telegramUserId: this.telegramUserId, userName: this.userName });
-
-            // Обновляем интерфейс
-            this.updateUI();
-        }, 1000); // Задержка 1 секунда
+        } catch (error) {
+            console.error("Ошибка при проверке Telegram WebApp:", error);
+        }
     }
 
-    updateUI() {
+    async waitForTelegram() {
+        // Ждем до 5 секунд, пока window.Telegram не станет доступен
+        const maxAttempts = 10;
+        let attempts = 0;
+
+        while (!window.Telegram && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
+        }
+
+        if (!window.Telegram) {
+            throw new Error("Telegram WebApp не инициализировался.");
+        }
+    }
+
+    initializeUI() {
         const userInfoElement = document.getElementById('userInfo');
         if (userInfoElement) {
             userInfoElement.textContent = `Добро пожаловать, ${this.userName}!`;
@@ -63,14 +74,8 @@ class TelegramGameApp {
             console.log("Элемент с id 'userInfo' не найден.");
         }
 
-        // Если данные пользователя не получены, выводим сообщение
-        if (this.stars === null || this.bank === null) {
-            document.getElementById('stars').textContent = "Не удалось определить пользователя";
-            document.getElementById('bank').textContent = "";
-        } else {
-            document.getElementById('stars').textContent = this.stars;
-            document.getElementById('bank').textContent = this.bank;
-        }
+        document.getElementById('stars').textContent = this.stars;
+        document.getElementById('bank').textContent = this.bank;
     }
 
     saveUserDataToFile(user) {
