@@ -2,8 +2,8 @@ console.log("Начало выполнения скрипта app.js");
 
 class TelegramGameApp {
     constructor() {
-        this.telegram = window.Telegram ? window.Telegram.WebApp : null;
         this.socket = io();
+        this.telegram = null;
         this.userName = "Неизвестный игрок";
         this.telegramUserId = null;
         this.targetNumber = Math.floor(Math.random() * 1000000) + 1;
@@ -15,38 +15,44 @@ class TelegramGameApp {
     }
 
     init() {
-        this.setUpTelegramUser();
+        this.checkTelegramWebApp();
         this.initializeUI();
         this.registerSocketEvents();
     }
 
-    setUpTelegramUser() {
-        if (this.telegram) {
-            alert("Telegram WebApp найден");
-            const user = this.telegram.initDataUnsafe?.user;
-            if (user) {
-                this.telegramUserId = user.id;
-                this.userName = user.first_name;
-                alert("Имя пользователя установлено: " + this.userName);
-                this.saveUserDataToFile(user);
-            } else {
-                alert("Пользовательские данные не найдены в Telegram.initDataUnsafe");
-            }
-        } else {
-            alert("Telegram WebApp не найден");
-        }
+    checkTelegramWebApp() {
+        // Задержка для инициализации Telegram WebApp
+        setTimeout(() => {
+            if (window.Telegram && window.Telegram.WebApp) {
+                console.log("Telegram WebApp найден");
+                this.telegram = window.Telegram.WebApp;
+                const user = this.telegram.initDataUnsafe?.user;
 
-        this.socket.emit('setTelegramUser', { telegramUserId: this.telegramUserId, userName: this.userName });
-        alert("Отправлены данные на сервер: " + JSON.stringify({ telegramUserId: this.telegramUserId, userName: this.userName }));
+                if (user) {
+                    this.telegramUserId = user.id;
+                    this.userName = user.first_name;
+                    console.log(`Имя пользователя: ${this.userName}`);
+                    this.saveUserDataToFile(user);
+                } else {
+                    console.log("Пользовательские данные не найдены в Telegram.initDataUnsafe");
+                }
+            } else {
+                console.log("Telegram WebApp не найден. Пожалуйста, откройте приложение через Telegram.");
+            }
+
+            // Отправляем данные на сервер
+            this.socket.emit('setTelegramUser', { telegramUserId: this.telegramUserId, userName: this.userName });
+            console.log("Отправлены данные на сервер:", { telegramUserId: this.telegramUserId, userName: this.userName });
+        }, 1000); // Задержка 1 секунда
     }
 
     initializeUI() {
         const userInfoElement = document.getElementById('userInfo');
         if (userInfoElement) {
             userInfoElement.textContent = `Добро пожаловать, ${this.userName}!`;
-            alert("Элемент userInfo обновлен.");
+            console.log("Элемент userInfo обновлен.");
         } else {
-            alert("Элемент с id 'userInfo' не найден.");
+            console.log("Элемент с id 'userInfo' не найден.");
         }
 
         document.getElementById('stars').textContent = this.stars;
@@ -108,6 +114,8 @@ class TelegramGameApp {
     }
 }
 
+// Инициализация приложения
 const app = new TelegramGameApp();
 
+// Кнопка для отправки числа
 document.getElementById('submitButton').addEventListener('click', () => app.submitGuess());
